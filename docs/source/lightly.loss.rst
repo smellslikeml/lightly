@@ -47,6 +47,9 @@ lightly.loss
 .. autoclass:: lightly.loss.memory_bank.MemoryBankModule
    :members:
 
+.. autoclass:: lightly.loss.mcr_loss.MCRLoss
+   :members:
+
 .. autoclass:: lightly.loss.mmcr_loss.MMCRLoss
    :members:
 
