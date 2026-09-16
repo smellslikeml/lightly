@@ -1,0 +1,42 @@
+loop: {max_iterations: 8, fix_code: true}
+benchmarks:
+  - name: "mcr-loss-parity"
+    suite: "notebook:eval/eval_mcr_loss_parity.ipynb"
+    packages: []
+    scorer: abs_diff_total_loss
+    baseline: none
+    metrics:
+      - name: abs_diff_total_loss
+        role: target
+        direction: min
+        threshold: 1.0e-06
+      - name: grad_finite_fraction
+        role: guardrail
+        direction: max
+        threshold: 1.0
+      - name: abs_diff_comp_loss
+        direction: min
+        threshold: 1.0e-06
+      - name: abs_diff_expa_loss
+        direction: min
+        threshold: 1.0e-06
+    policy: {guardrail_veto: true}
+    compute: {tier: cpu}
+    held_constant:
+      - "torch.manual_seed(42) fixed input, teacher shape 2x8x16, student shape 6x8x16, float32"
+      - "single-process execution, no torch.distributed init (reduce_cov guard is a no-op)"
+      - "reference implementation is the embedded ReferenceMCRLoss port from tests/loss/test_mcr_loss.py, not reimplemented inline"
+      - "the grad_finite_fraction guardrail uses a trivial MCRLoss-independent computation on the baseline arm so it is achievable pre-change; it only tests real autograd/NaN behavior on the PR-head arm"
+    avoid:
+      - "no wall-clock timing; this is a pure numerics parity check"
+      - "no unpinned torch build differences across arms; same interpreter/torch version used for the single measured arm"
+    provenance:
+      abs_diff_total_loss: "user_guidance"
+      abs_diff_comp_loss: "repo_runner:tests/loss/test_mcr_loss.py::TestMCRLossParity"
+      abs_diff_expa_loss: "repo_runner:tests/loss/test_mcr_loss.py::TestMCRLossParity"
+      grad_finite_fraction: "maintainer_comment:VALIDATION.md (gradient flow to student and teacher)"
+      held_constant: "repo_runner:tests/loss/test_mcr_loss.py::TestMCRLossParity._seeded_inputs"
+      baseline: "claim_analysis:candidate_set (comparison lives inside the PR-head arm against an embedded reference port; MCRLoss does not exist pre-change; only the gradient-flow guardrail is scored on the baseline arm, via an MCRLoss-independent computation)"
+question:
+  kind: capability
+  ask: "The ported lightly MCRLoss (SimDINO coding-rate loss) reproduces the same compression, expansion, and total loss values as the author's reference MCRLoss implementation on a fixed, seeded input."
